@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>PAN Card Tampering Detection</title>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i> PAN Card Tampering Detection
+            </div>
+            <div class="brand-tag">
+                Made by <a href="#">LuciferCorp</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <div class="container">
+            <h1>Detect PAN Card Tampering</h1>
+            <p>Upload a PAN card image to verify its authenticity using advanced image comparison technology</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Upload Card -->
+        <div class="card">
+            <h2 class="card-title">
+                <i class="fas fa-upload"></i> Upload PAN Card Image
+            </h2>
+            
+            <form action="/" method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="upload-section">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-text">Drag & Drop your image here</div>
+                        <div class="upload-hint">or click to browse</div>
+                        <div class="upload-hint" style="margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.7;">
+                            <i class="fas fa-info-circle"></i> Supports: JPG, JPEG, PNG, WEBP, BMP, GIF, TIFF
+                        </div>
+                        <div class="file-input-wrapper">
+                            <input type="file" 
+                                   name="file_upload" 
+                                   id="file_upload" 
+                                   class="file-input" 
+                                   accept="image/*" 
+                                   required>
+                            <label for="file_upload" class="btn btn-primary">
+                                <i class="fas fa-folder-open"></i> Choose File
+                            </label>
+                        </div>
+                        <div id="fileNameDisplay" class="file-name-display" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-primary btn-large" id="submitBtn">
+                        <i class="fas fa-search"></i> Check for Tampering
+                    </button>
+                </div>
+            </form>
+
+            <!-- Loading Spinner -->
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <div class="loader-text">Analyzing image... Please wait</div>
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            {% if error %}
+            <div class="alert alert-danger" style="margin-top: 1.5rem;">
+                <i class="fas fa-exclamation-circle"></i>
+                <div>
+                    <strong>Error:</strong> {{ error }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Results Section -->
+        {% if pred %}
+        <div class="results-section show" id="resultsSection">
+            <div class="result-card">
+                <div class="result-header">
+                    <h3 class="result-title">
+                        <i class="fas fa-clipboard-check"></i> Analysis Results
+                    </h3>
+                    {% set score = pred.split('%')[0] | float %}
+                    {% if score >= 90 %}
+                        <span class="result-badge badge-success">
+                            <i class="fas fa-check-circle"></i> Authentic
+                        </span>
+                    {% elif score >= 70 %}
+                        <span class="result-badge badge-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Suspicious
+                        </span>
+                    {% else %}
+                        <span class="result-badge badge-danger">
+                            <i class="fas fa-times-circle"></i> Tampered
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="alert {% if score >= 90 %}alert-success{% elif score >= 70 %}alert-warning{% else %}alert-danger{% endif %}">
+                    <i class="fas fa-{% if score >= 90 %}check-circle{% elif score >= 70 %}exclamation-triangle{% else %}times-circle{% endif %}"></i>
+                    <div>
+                        <strong>Similarity Score: {{ pred }}</strong>
+                        <br>
+                        <small>
+                            {% if score >= 90 %}
+                                The PAN card appears to be authentic with high similarity to the original.
+                            {% elif score >= 70 %}
+                                The PAN card shows some discrepancies. Please verify manually.
+                            {% else %}
+                                The PAN card shows significant differences and may be tampered.
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Image Comparison Grid -->
+                <div class="image-grid">
+                    <div class="image-card" onclick="openModal('{{ url_for('static', filename='generated/image_original.jpg') }}')">
+                        <img src="{{ url_for('static', filename='generated/image_original.jpg') }}" 
+                             alt="Original Image" 
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect fill=\'%23e2e8f0\' width=\'400\' height=\'300\'/%3E%3Ctext fill=\'%2394a3b8\' font-family=\'sans-serif\' font-size=\'18\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\'%3EOriginal Image%3C/text%3E%3C/svg%3E'">
+                        <div class="image-label">
+                            <i class="fas fa-image"></i> Original Image
+                        </div>
+                    </div>
+                    
+                    <div class="image-card" onclick="openModal('{{ url_for('static', filename='generated/image_uploaded.jpg') }}')">
+                        <img src="{{ url_for('static', filename='generated/image_uploaded.jpg') }}" 
+                             alt="Uploaded Image" 
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect fill=\'%23e2e8f0\' width=\'400\' height=\'300\'/%3E%3Ctext fill=\'%2394a3b8\' font-family=\'sans-serif\' font-size=\'18\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\'%3EUploaded Image%3C/text%3E%3C/svg%3E'">
+                        <div class="image-label">
+                            <i class="fas fa-upload"></i> Uploaded Image
+                        </div>
+                    </div>
+                    
+                    <div class="image-card" onclick="openModal('{{ url_for('static', filename='generated/image_diff.jpg') }}')">
+                        <img src="{{ url_for('static', filename='generated/image_diff.jpg') }}" 
+                             alt="Difference Map" 
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect fill=\'%23e2e8f0\' width=\'400\' height=\'300\'/%3E%3Ctext fill=\'%2394a3b8\' font-family=\'sans-serif\' font-size=\'18\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\'%3EDifference Map%3C/text%3E%3C/svg%3E'">
+                        <div class="image-label">
+                            <i class="fas fa-search"></i> Difference Map
+                        </div>
+                    </div>
+                    
+                    <div class="image-card" onclick="openModal('{{ url_for('static', filename='generated/image_thresh.jpg') }}')">
+                        <img src="{{ url_for('static', filename='generated/image_thresh.jpg') }}" 
+                             alt="Threshold Image" 
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect fill=\'%23e2e8f0\' width=\'400\' height=\'300\'/%3E%3Ctext fill=\'%2394a3b8\' font-family=\'sans-serif\' font-size=\'18\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\'%3EThreshold Image%3C/text%3E%3C/svg%3E'">
+                        <div class="image-label">
+                            <i class="fas fa-adjust"></i> Threshold Image
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal">
+        <span class="modal-close" id="modalClose">&times;</span>
+        <img class="modal-content" id="modalImage" src="" alt="Enlarged Image">
+    </div>
+
+    <!-- Footer -->
+    <footer style="text-align: center; padding: 2rem; color: white; opacity: 0.9; position: relative; z-index: 1;">
+        <p style="font-weight: 500; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);">
+            <i class="fas fa-heart" style="color: #ef4444; animation: pulse 1.5s ease-in-out infinite;"></i>
+            &copy; 2024 PAN Card Tampering Detection. All rights reserved.
+        </p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // File input handling
+        const fileInput = document.getElementById('file_upload');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const uploadArea = document.getElementById('uploadArea');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const loader = document.getElementById('loader');
+        const progressBar = document.getElementById('progressBar');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalClose = document.getElementById('modalClose');
+
+        // Display selected file name with preview
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const fileName = this.files[0].name;
+                const fileSize = (this.files[0].size / 1024 / 1024).toFixed(2);
+                fileNameDisplay.innerHTML = `<i class="fas fa-file-image"></i> Selected: ${fileName} (${fileSize} MB)`;
+                fileNameDisplay.style.display = 'flex';
+                uploadArea.style.borderColor = 'var(--success-color)';
+                uploadArea.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)';
+                
+                // Preview image if possible
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.createElement('img');
+                    preview.src = e.target.result;
+                    preview.style.maxWidth = '200px';
+                    preview.style.maxHeight = '150px';
+                    preview.style.borderRadius = '0.5rem';
+                    preview.style.marginTop = '1rem';
+                    preview.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+                    
+                    // Remove existing preview if any
+                    const existingPreview = uploadArea.querySelector('.image-preview');
+                    if (existingPreview) existingPreview.remove();
+                    
+                    preview.className = 'image-preview';
+                    uploadArea.appendChild(preview);
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('dragover');
+            
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                fileInput.files = e.dataTransfer.files;
+                const fileName = e.dataTransfer.files[0].name;
+                const fileSize = (e.dataTransfer.files[0].size / 1024 / 1024).toFixed(2);
+                fileNameDisplay.innerHTML = `<i class="fas fa-file-image"></i> Selected: ${fileName} (${fileSize} MB)`;
+                fileNameDisplay.style.display = 'flex';
+                uploadArea.style.borderColor = 'var(--success-color)';
+                uploadArea.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)';
+                
+                // Trigger change event for preview
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // Click on upload area to trigger file input
+        uploadArea.addEventListener('click', function(e) {
+            if (e.target !== fileInput && e.target.tagName !== 'LABEL' && e.target.tagName !== 'IMG') {
+                fileInput.click();
+            }
+        });
+
+        // Form submission with loading state
+        uploadForm.addEventListener('submit', function() {
+            if (fileInput.files && fileInput.files[0]) {
+                loader.classList.add('show');
+                progressBar.classList.add('show');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                
+                // Animate progress bar
+                const progressFill = progressBar.querySelector('.progress-fill');
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    if (progress <= 90) {
+                        progressFill.style.width = progress + '%';
+                    }
+                }, 200);
+            }
+        });
+
+        // Image Modal functionality
+        function openModal(imageSrc) {
+            modalImage.src = imageSrc;
+            imageModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            imageModal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        modalClose.addEventListener('click', closeModal);
+        
+        imageModal.addEventListener('click', function(e) {
+            if (e.target === imageModal) {
+                closeModal();
+            }
+        });
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && imageModal.classList.contains('show')) {
+                closeModal();
+            }
+        });
+
+        // Scroll to results if they exist
+        {% if pred %}
+        window.addEventListener('load', function() {
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                setTimeout(function() {
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 500);
+            }
+        });
+        {% endif %}
+
+        // Add smooth scroll behavior with passive listeners
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, { passive: false });
+        });
+
+        // Optimize scroll performance
+        let lastScrollTop = 0;
+        window.addEventListener('scroll', function() {
+            // Throttle scroll events
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (Math.abs(scrollTop - lastScrollTop) > 5) {
+                lastScrollTop = scrollTop;
+            }
+        }, { passive: true });
+
+        // Optimized parallax effect with requestAnimationFrame
+        let ticking = false;
+        function updateParallax() {
+            const scrolled = window.pageYOffset;
+            const hero = document.querySelector('.hero');
+            if (hero && scrolled < 500) {
+                hero.style.transform = `translate3d(0, ${scrolled * 0.3}px, 0)`;
+                hero.style.opacity = Math.max(0.3, 1 - (scrolled / 500));
+            }
+            ticking = false;
+        }
+
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                window.requestAnimationFrame(updateParallax);
+                ticking = true;
+            }
+        }, { passive: true });
+    </script>
+</body>
+</html>
